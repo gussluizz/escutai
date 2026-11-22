@@ -7,28 +7,29 @@ public class Usuario {
     private String senha;
     private String username;
 
-    public Usuario(String nome, String username, String email, String senha) 
-    {
-
+    public Usuario(String nome, String username, String email, String senha) {
         this.nome = nome;
         this.username = username;
         this.email = email;
         this.senha = senha;
-
     }
 
-    public String getNome() 
-    {
+    public String getNome() {
         return nome;
     }
 
-    public String getUsername() 
-    {
+    public String getUsername() {
         return username;
     }
 
-    public String getEmail() 
-    {
+    public String getEmail() {
         return email;
+    }
+
+    public boolean verificarSenha(String senhaInformada) {
+        if (senhaInformada == null) {
+            return false;
+        }
+        return this.senha.equals(senhaInformada);
     }
 }
