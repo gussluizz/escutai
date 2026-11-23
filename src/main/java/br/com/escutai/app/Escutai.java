@@ -22,6 +22,10 @@ import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
 import br.com.escutai.catalogo.model.Musica;
+import br.com.escutai.catalogo.model.Album;
+import br.com.escutai.catalogo.model.ConteudoMusical;
+import br.com.escutai.shared.exception.BuscaSemResultadosException;
+import br.com.escutai.shared.exception.ErroComunicacaoApiException;
 import java.net.URI;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -138,6 +142,9 @@ public class Escutai extends JFrame {
         String genre, title, artist, album;
         int year;
         boolean isAlbum;
+        long duracaoMs;
+        String linkAppleMusic;
+        String linkSpotify;
         /** URL da capa (iTunes). Se for null, usa a capa gerada (gradiente + inicial). */
         volatile String imagemUrl;
 
@@ -1995,13 +2002,14 @@ public class Escutai extends JFrame {
         }
 
         /** Consulta o iTunes com o texto digitado e mostra os resultados quando chegam. */
-        void buscarNoItunes() {
+     void buscarNoItunes() {
             String termo = search.getText().trim();
             if (buscaAtual != null)
                 buscaAtual.cancel(true);
             if (termo.length() < 2) {
                 termoConsultado = "";
                 statusBusca = "";
+                erroBusca = "";
                 resultadosTracks = new ArrayList<>();
                 refresh();
                 return;
@@ -2013,10 +2021,17 @@ public class Escutai extends JFrame {
             erroBusca = "";
             resultadosTracks = new ArrayList<>();
             refresh();
+
             buscaAtual = new SwingWorker<List<Musica>, Void>() {
+                final List<Track> encontrados = new ArrayList<>();
+
                 @Override
                 protected List<Musica> doInBackground() throws Exception {
-                    return itunesService.buscarMusicas(termo);
+                    ArrayList<ConteudoMusical> conteudos = itunesService.buscarTodos(termo);
+                    for (ConteudoMusical c : conteudos) {
+                        encontrados.add(paraTrack(c));
+                    }
+                    return new ArrayList<>();
                 }
 
                 @Override
@@ -2024,16 +2039,21 @@ public class Escutai extends JFrame {
                     if (isCancelled() || !termo.equals(search.getText().trim()))
                         return;
                     try {
-                        List<Track> lista = new ArrayList<>();
-                        for (Musica m : get())
-                            lista.add(paraTrack(m));
-                        resultadosTracks = lista;
+                        get();
+                        resultadosTracks = encontrados;
                         statusBusca = "ok";
                     } catch (Exception e) {
                         Throwable causa = e.getCause() != null ? e.getCause() : e;
-                        statusBusca = "erro";
-                        erroBusca = causa.getClass().getSimpleName() + ": " + causa.getMessage();
-                        System.out.println("Falha na busca do iTunes: " + erroBusca);
+                        if (causa instanceof BuscaSemResultadosException) {
+                            statusBusca = "vazio";
+                            erroBusca = causa.getMessage();
+                        } else if (causa instanceof ErroComunicacaoApiException) {
+                            statusBusca = "erro";
+                            erroBusca = causa.getMessage();
+                        } else {
+                            statusBusca = "erro";
+                            erroBusca = "Erro inesperado: " + causa.getMessage();
+                        }
                     }
                     refresh();
                 }
@@ -2041,14 +2061,20 @@ public class Escutai extends JFrame {
             buscaAtual.execute();
         }
 
-        /** Converte uma Musica do iTunes em Track (reaproveita se já existir). */
-        Track paraTrack(Musica m) {
-            String chave = "musica:" + m.getId();
+        /** Converte um ConteudoMusical (Musica ou Album) do iTunes em Track. */
+        Track paraTrack(ConteudoMusical c) {
+            boolean ehAlbum = c instanceof Album;
+            String chave = (ehAlbum ? "album:" : "musica:") + c.getId();
             Track t = Store.porApple.get(chave);
             if (t == null) {
-                t = new Track(Store.tracks.size() + 1, "Busca", m.getTitulo(), m.getArtista(), "Apple Music", 0,
-                        false);
-                t.imagemUrl = m.getImagemUrl();
+                t = new Track(Store.tracks.size() + 1, "Busca iTunes", c.getTitulo(), c.getArtista(),
+                        ehAlbum ? c.getTitulo() : "Single / Apple Music", 0, ehAlbum);
+                t.imagemUrl = c.getImagemUrl();
+                t.linkAppleMusic = c.getLinkAppleMusic();
+                t.linkSpotify = c.getLinkSpotify();
+                if (c instanceof Musica m) {
+                    t.duracaoMs = m.getDuracao();
+                }
                 Store.tracks.add(t);
                 Store.porApple.put(chave, t);
             }
@@ -2195,10 +2221,18 @@ public class Escutai extends JFrame {
             info.add(gap(2));
             info.add(left(label(track.title, 32, true, TEXT)));
             info.add(left(label(track.artist, 17, false, MUTED)));
-            String detalhes = (track.isAlbum ? "" : track.album + "  ·  ") + (track.year > 0 ? track.year + "  ·  " : "")
-                    + track.genre;
+            String duracaoFmt = "";
+            if (!track.isAlbum && track.duracaoMs > 0) {
+                long totalSeg = track.duracaoMs / 1000;
+                duracaoFmt = String.format("  ·  %02d:%02d", totalSeg / 60, totalSeg % 60);
+            }
+
+            String detalhes = (track.isAlbum ? "" : track.album + "  ·  ")
+                    + (track.year > 0 ? track.year + "  ·  " : "")
+                    + track.genre + duracaoFmt;
             info.add(left(label(detalhes, 13, false, MUTED)));
             info.add(gap(14));
+
             JPanel avgRow = flow(10);
             double avg = Store.avg(track.id);
             int n = Store.of(track.id).size();
@@ -2207,12 +2241,32 @@ public class Escutai extends JFrame {
                     13, false, TEXT));
             info.add(left(avgRow));
             info.add(gap(14));
-            HeartButton fav = left(new HeartButton(isFav));
+
+            JPanel acoesRow = flow(10);
+            HeartButton fav = new HeartButton(isFav);
             fav.onToggle = () -> {
                 if (!me.favorites.remove(track.id))
                     me.favorites.add(track.id);
             };
-            info.add(fav);
+            acoesRow.add(fav);
+
+            String queryUrl = java.net.URLEncoder.encode(track.title + " " + track.artist,
+                    java.nio.charset.StandardCharsets.UTF_8);
+            String urlApple = (track.linkAppleMusic != null && !track.linkAppleMusic.isBlank())
+                    ? track.linkAppleMusic
+                    : "https://music.apple.com/br/search?term=" + queryUrl;
+            String urlSpotify = (track.linkSpotify != null && !track.linkSpotify.isBlank())
+                    ? track.linkSpotify
+                    : "https://open.spotify.com/search/" + queryUrl;
+
+            GlassButton btnApple = new GlassButton("Abrir no Apple Music ›", Kind.GLASS);
+            btnApple.addActionListener(e -> abrirLinkNavegador(urlApple));
+            acoesRow.add(btnApple);
+
+            GlassButton btnSpotify = new GlassButton("Buscar no Spotify ›", Kind.GLASS);
+            btnSpotify.addActionListener(e -> abrirLinkNavegador(urlSpotify));
+            acoesRow.add(btnSpotify);
+            info.add(left(acoesRow));
             head.add(info, BorderLayout.CENTER);
             fixHeight(head);
             content.add(head);
@@ -2290,6 +2344,17 @@ public class Escutai extends JFrame {
 
             content.revalidate();
             content.repaint();
+        }
+        void abrirLinkNavegador(String url) {
+            try {
+                if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                    Desktop.getDesktop().browse(URI.create(url));
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                        "Não foi possível abrir o navegador.\nLink: " + url,
+                        "Aviso", JOptionPane.INFORMATION_MESSAGE);
+            }
         }
     }
 
