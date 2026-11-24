@@ -2,7 +2,9 @@ package br.com.escutai.avaliacao.repository;
 
 import br.com.escutai.avaliacao.model.Avaliacao;
 import br.com.escutai.catalogo.model.ConteudoMusical;
+import br.com.escutai.shared.persistence.RepositorioJson;
 import br.com.escutai.usuario.model.Usuario;
+import br.com.escutai.usuario.repository.UsuarioRepository;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,20 +12,51 @@ import java.util.List;
 public class AvaliacaoRepository {
 
     private List<Avaliacao> avaliacoes;
+    private RepositorioJson repositorioJson;
 
     public AvaliacaoRepository() {
-        this.avaliacoes = new ArrayList<>();
+        this(new RepositorioJson(), new ArrayList<Usuario>());
+    }
+
+    public AvaliacaoRepository(RepositorioJson repositorioJson, UsuarioRepository usuarioRepository) {
+        this(repositorioJson, usuarioRepository.listarTodos());
+    }
+
+    private AvaliacaoRepository(RepositorioJson repositorioJson, List<Usuario> usuarios) {
+        this.repositorioJson = repositorioJson;
+        this.avaliacoes = repositorioJson.carregarAvaliacoes(usuarios);
     }
 
     public void salvar(Avaliacao avaliacao) {
         avaliacoes.add(avaliacao);
+        salvarDados();
     }
 
     public boolean remover(Avaliacao avaliacao) {
         if (avaliacao == null) {
             return false;
         }
-        return avaliacoes.remove(avaliacao);
+        boolean removida = avaliacoes.remove(avaliacao);
+        if (removida) {
+            salvarDados();
+        }
+        return removida;
+    }
+
+    public void atualizarDados() {
+        salvarDados();
+    }
+
+    private void salvarDados() {
+        repositorioJson.salvarAvaliacoes(avaliacoes);
+    }
+
+    public List<Avaliacao> listarTodas() {
+        return new ArrayList<>(avaliacoes);
+    }
+
+    public boolean contem(Avaliacao avaliacao) {
+        return avaliacoes.contains(avaliacao);
     }
 
     public Avaliacao buscarPorUsuarioEConteudo(Usuario usuario, ConteudoMusical conteudo) {
