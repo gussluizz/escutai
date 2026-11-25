@@ -12,7 +12,11 @@ import java.util.List;
 
 public class AvaliacaoService {
 
-    private AvaliacaoRepository repository;
+    private final AvaliacaoRepository repository;
+
+    public AvaliacaoService() {
+        this(new AvaliacaoRepository());
+    }
 
     public AvaliacaoService(AvaliacaoRepository repository) {
         this.repository = repository;
@@ -32,6 +36,10 @@ public class AvaliacaoService {
         return novaAvaliacao;
     }
 
+    public List<Avaliacao> listarAvaliacoesDoUsuario(Usuario usuario) {
+        return repository.listarPorUsuario(usuario);
+    }
+
     public List<Avaliacao> listarAvaliacoes(ConteudoMusical conteudo) {
         return repository.listarPorConteudo(conteudo);
     }
@@ -41,7 +49,7 @@ public class AvaliacaoService {
         List<Avaliacao> deOutros = new ArrayList<>();
 
         for (Avaliacao a : todas) {
-            if (usuarioLogado == null || !a.getUsuario().getUsername().equals(usuarioLogado.getUsername())) {
+            if (usuarioLogado == null || !a.getUsuario().getUsername().equalsIgnoreCase(usuarioLogado.getUsername())) {
                 deOutros.add(a);
             }
         }
@@ -52,24 +60,30 @@ public class AvaliacaoService {
         if (usuarioLogado == null || avaliacao == null) {
             throw new IllegalArgumentException("Usuário e avaliação devem ser informados.");
         }
-        if (!avaliacao.getUsuario().getUsername().equals(usuarioLogado.getUsername())) {
+        if (!avaliacao.getUsuario().getUsername().equalsIgnoreCase(usuarioLogado.getUsername())) {
             throw new SecurityException("Você só pode editar suas próprias avaliações.");
         }
 
         avaliacao.setNota(novaNota);
         avaliacao.setComentario(novoComentario);
         avaliacao.setData(LocalDate.now());
+        repository.atualizarDados();
     }
 
     public boolean excluirAvaliacao(Usuario usuarioLogado, Avaliacao avaliacao) {
         if (usuarioLogado == null || avaliacao == null) {
             return false;
         }
-        if (!avaliacao.getUsuario().getUsername().equals(usuarioLogado.getUsername())) {
+        if (!avaliacao.getUsuario().getUsername().equalsIgnoreCase(usuarioLogado.getUsername())) {
             throw new SecurityException("Você só pode excluir suas próprias avaliações.");
         }
 
-        avaliacao.getConteudo().getAvaliacoes().remove(avaliacao);
+        if (avaliacao.getConteudo() != null) {
+            avaliacao.getConteudo().getAvaliacoes().removeIf(a ->
+                    a == avaliacao || (a.getUsuario() != null
+                            && a.getUsuario().getUsername().equalsIgnoreCase(usuarioLogado.getUsername()))
+            );
+        }
         return repository.remover(avaliacao);
     }
 

@@ -9,16 +9,22 @@ import br.com.escutai.usuario.model.Usuario;
 import java.util.List;
 
 public class FavoritoService {
-    private FavoritoRepository repository;
+
+    private final FavoritoRepository repository;
+
+    public FavoritoService() {
+        this(new FavoritoRepository());
+    }
 
     public FavoritoService(FavoritoRepository repository) {
         this.repository = repository;
     }
-    public void adicionarNaLista(Usuario usuario, ConteudoMusical conteudoMusical){
-        if(usuario == null || conteudoMusical == null){
+
+    public void adicionarNaLista(Usuario usuario, ConteudoMusical conteudoMusical) {
+        if (usuario == null || conteudoMusical == null) {
             throw new IllegalArgumentException("Usuário e conteúdo devem ser informados");
         }
-        if(repository.existe(usuario, conteudoMusical)){
+        if (repository.existe(usuario, conteudoMusical)) {
             throw new ConteudoJaFavoritadoException(
                     "O conteúdo '" + conteudoMusical.getTitulo() + "' já está na lista de favoritos do usuário '" + usuario.getUsername() + "'."
             );
@@ -26,14 +32,19 @@ public class FavoritoService {
         Favorito novoFavorito = new Favorito(usuario, conteudoMusical);
         repository.salvar(novoFavorito);
     }
-    public boolean removerDaLista(Usuario usuario, ConteudoMusical conteudo){
-        if(usuario == null || conteudo == null){
+
+    public boolean removerDaLista(Usuario usuario, ConteudoMusical conteudo) {
+        if (usuario == null || conteudo == null) {
             return false;
         }
-        return repository.remover(usuario,conteudo);
+        return repository.remover(usuario, conteudo);
     }
+
     public List<ConteudoMusical> listarFavoritos(Usuario usuario) {
         return repository.listarFavoritosPorUsuario(usuario);
     }
 
+    public boolean isFavorito(Usuario usuario, ConteudoMusical conteudo) {
+        return repository.existe(usuario, conteudo);
+    }
 }
