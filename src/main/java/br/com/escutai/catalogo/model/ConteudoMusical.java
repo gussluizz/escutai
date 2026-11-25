@@ -1,7 +1,10 @@
 package br.com.escutai.catalogo.model;
-import br.com.escutai.avaliacao.model.Avaliavel;
-import java.util.ArrayList;
+
 import br.com.escutai.avaliacao.model.Avaliacao;
+import br.com.escutai.avaliacao.model.Avaliavel;
+
+import java.util.ArrayList;
+import java.util.Objects;
 
 public abstract class ConteudoMusical implements Avaliavel {
 
@@ -13,8 +16,7 @@ public abstract class ConteudoMusical implements Avaliavel {
     private String linkAppleMusic;
     private ArrayList<Avaliacao> avaliacoes;
 
-    public ConteudoMusical(long id, String titulo, String artista, String imagemUrl, String linkSpotify, String linkAppleMusic) 
-    {
+    public ConteudoMusical(long id, String titulo, String artista, String imagemUrl, String linkSpotify, String linkAppleMusic) {
         this.id = id;
         this.titulo = titulo;
         this.artista = artista;
@@ -25,44 +27,47 @@ public abstract class ConteudoMusical implements Avaliavel {
     }
 
     @Override
-    public void adicionarAvaliacao(Avaliacao avaliacao) 
-        {
-            avaliacoes.add(avaliacao);
-        }
+    public void adicionarAvaliacao(Avaliacao avaliacao) {
+        avaliacoes.add(avaliacao);
+    }
 
-    public long getId() 
-    {
+    public long getId() {
         return id;
     }
 
-    public String getTitulo() 
-    {
+    public String getTitulo() {
         return titulo;
     }
 
-    public String getArtista() 
-    {
+    public String getArtista() {
         return artista;
     }
 
-    public String getImagemUrl() 
-    {
+    public String getImagemUrl() {
         return imagemUrl;
     }
 
-    public String getLinkSpotify() 
-    {
+    public String getLinkSpotify() {
         return linkSpotify;
     }
 
-    public String getLinkAppleMusic() 
-    {
+    public String getLinkAppleMusic() {
         return linkAppleMusic;
     }
 
-    public ArrayList<Avaliacao> getAvaliacoes() 
-    {
+    public ArrayList<Avaliacao> getAvaliacoes() {
         return avaliacoes;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ConteudoMusical that)) return false;
+        return id == that.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
 }

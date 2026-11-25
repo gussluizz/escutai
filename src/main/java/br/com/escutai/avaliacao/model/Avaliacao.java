@@ -1,10 +1,10 @@
 package br.com.escutai.avaliacao.model;
 
-import java.time.LocalDate;
-
 import br.com.escutai.catalogo.model.ConteudoMusical;
 import br.com.escutai.shared.exception.NotaInvalidaException;
 import br.com.escutai.usuario.model.Usuario;
+
+import java.time.LocalDate;
 
 public class Avaliacao {
 
@@ -17,9 +17,17 @@ public class Avaliacao {
     public Avaliacao(int nota, String comentario, LocalDate data, Usuario usuario, ConteudoMusical conteudo) throws NotaInvalidaException {
         setNota(nota);
         this.comentario = comentario;
-        this.data = data;
+        this.data = (data != null) ? data : LocalDate.now();
         this.usuario = usuario;
         this.conteudo = conteudo;
+    }
+
+    public Avaliacao(Usuario usuario, ConteudoMusical conteudo, int nota, String comentario, LocalDate data) throws NotaInvalidaException {
+        this(nota, comentario, data, usuario, conteudo);
+    }
+
+    public Avaliacao(Usuario usuario, ConteudoMusical conteudo, int nota, String comentario) throws NotaInvalidaException {
+        this(nota, comentario, LocalDate.now(), usuario, conteudo);
     }
 
     public int getNota() {

@@ -1,5 +1,6 @@
 package br.com.escutai.usuario.repository;
 
+import br.com.escutai.shared.persistence.RepositorioJson;
 import br.com.escutai.usuario.model.Usuario;
 
 import java.util.ArrayList;
@@ -8,13 +9,20 @@ import java.util.List;
 public class UsuarioRepository {
 
     private List<Usuario> usuarios;
+    private RepositorioJson repositorioJson;
 
     public UsuarioRepository() {
-        this.usuarios = new ArrayList<>();
+        this(new RepositorioJson());
+    }
+
+    public UsuarioRepository(RepositorioJson repositorioJson) {
+        this.repositorioJson = repositorioJson;
+        this.usuarios = repositorioJson.carregarUsuarios();
     }
 
     public void salvar(Usuario usuario) {
         usuarios.add(usuario);
+        repositorioJson.salvarUsuarios(usuarios);
     }
 
     public boolean existePorEmail(String email) {
@@ -47,7 +55,8 @@ public class UsuarioRepository {
         }
         String loginLimpo = login.trim();
         for (Usuario u : usuarios) {
-            if (u.getEmail().equalsIgnoreCase(loginLimpo) || u.getUsername().equalsIgnoreCase(loginLimpo)) {
+            if (u.getEmail().equalsIgnoreCase(loginLimpo)
+                    || u.getUsername().equalsIgnoreCase(loginLimpo)) {
                 return u;
             }
         }

@@ -1,3 +1,4 @@
+
 package br.com.escutai.usuario.model;
 
 public class Usuario {
@@ -26,10 +27,15 @@ public class Usuario {
         return email;
     }
 
+    public String getSenha() {
+        return senha;
+    }
+
     public boolean verificarSenha(String senhaInformada) {
         if (senhaInformada == null) {
             return false;
         }
+
         return this.senha.equals(senhaInformada);
     }
 }
