@@ -1,0 +1,32 @@
+[
+  {
+    "nome": "Gustavo",
+    "username": "gussluizz",
+    "email": "gustavo.luiz@ufu.br",
+    "senha": "12345"
+  },
+  {
+    "nome": "pedro",
+    "username": "pedrox",
+    "email": "gus",
+    "senha": "123"
+  },
+  {
+    "nome": "mariana",
+    "username": "marianix",
+    "email": "a",
+    "senha": "12"
+  },
+  {
+    "nome": "pedro",
+    "username": "pedrorx",
+    "email": "pe",
+    "senha": "123"
+  },
+  {
+    "nome": "wender",
+    "username": "w3nderr",
+    "email": "wender",
+    "senha": "12"
+  }
+]
